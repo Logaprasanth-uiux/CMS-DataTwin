@@ -1,0 +1,93 @@
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  
+  /* Core Colors */
+  --background: #f8f9fa; /* Light neutral workspace background */
+  --foreground: #1e2022; /* Text color */
+  --card: #ffffff; /* Card/Surface backgrounds */
+  --card-foreground: #1e2022;
+  
+  /* Panel Colors */
+  --panel-bg: #ffffff;
+  --panel-border: rgba(0, 0, 0, 0.06);
+  --panel-header-bg: #fafbfc;
+  
+  /* Accents */
+  --primary: #121314; /* Deep neutral key brand color */
+  --primary-foreground: #ffffff;
+  --accent: #f1f3f5;
+  --accent-foreground: #121314;
+  --muted: #f8f9fa;
+  --muted-foreground: #6c757d;
+  
+  /* Status Colors */
+  --status-pending: #f1f3f5;
+  --status-pending-text: #495057;
+  --status-approved: #ebfbee;
+  --status-approved-text: #2b8a3e;
+  --status-critical: #fff5f5;
+  --status-critical-text: #c92a2a;
+  
+  /* Semantic spacing & dimensions */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  
+  /* Editor Specifics */
+  --canvas-bg: #f3f4f6;
+  --canvas-grid: rgba(0, 0, 0, 0.02);
+  --selection-outline: #228be6; /* Blue selection ring */
+  --hover-outline: rgba(34, 139, 230, 0.4);
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--panel-border);
+  
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+}
+
+/* Custom Scrollbar styling for a compact, clean look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Canvas background grid pattern */
+.canvas-grid-pattern {
+  background-color: var(--canvas-bg);
+  background-image: 
+    linear-gradient(var(--canvas-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+}

@@ -1,0 +1,29 @@
+@import "tailwindcss";
+@import "../styles/theme.css";
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  overflow: hidden; /* Prevent default scrolling; layout panels scroll independently */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Input styles focus styling */
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--selection-outline);
+  outline-offset: -1px;
+}
+
+/* Hide Next.js default developer portal indicator elements */
+nextjs-portal,
+#nextjs-dev-indicator,
+.nextjs-portal,
+[data-nextjs-toast-errors-parent] {
+  display: none !important;
+}
