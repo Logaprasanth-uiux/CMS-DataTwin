@@ -25,7 +25,20 @@ const PROPERTY_GROUPS = {
 };
 
 export default function PropertiesInspector() {
-  const { document, selectedNodeId, updateNodeProps, removeNode, duplicateNode } = useEditorStore();
+  const { pages, activePageId, selectedNodeId, updateNodeProps, removeNode, duplicateNode } = useEditorStore();
+  const document = activePageId ? pages[activePageId] : null;
+
+  if (!document) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none bg-white">
+        <Sliders className="h-6 w-6 text-slate-300 mb-2" />
+        <span className="text-xs font-semibold text-slate-400">Inspector Panel</span>
+        <p className="text-[10px] text-slate-400 max-w-[200px] mt-1 leading-relaxed">
+          No active page document
+        </p>
+      </div>
+    );
+  }
 
   if (!selectedNodeId) {
     return (

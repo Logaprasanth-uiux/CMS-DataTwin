@@ -8,8 +8,17 @@ import { Copy, Trash2, ChevronRight, ChevronDown, FileText } from "lucide-react"
 import { useState } from "react";
 
 export default function ComponentTree() {
-  const { document, selectedNodeId, selectNode, duplicateNode, removeNode } = useEditorStore();
+  const { pages, activePageId, selectedNodeId, selectNode, duplicateNode, removeNode } = useEditorStore();
+  const document = activePageId ? pages[activePageId] : null;
   const [collapsedNodes, setCollapsedNodes] = useState<Record<string, boolean>>({});
+
+  if (!document) {
+    return (
+      <div className="p-4 text-xs text-slate-400 font-mono">
+        No active page document
+      </div>
+    );
+  }
 
   const toggleCollapse = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
