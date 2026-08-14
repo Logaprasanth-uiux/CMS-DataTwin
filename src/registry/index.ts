@@ -268,6 +268,27 @@ export const COMPONENT_REGISTRY: Record<string, ComponentContract> = {
           { label: 'Comfortable', value: 'comfortable' },
         ],
       },
+      columns: {
+        type: 'json',
+        label: 'Columns',
+        defaultValue: [
+          { key: 'id', label: 'ID', type: 'string' },
+          { key: 'type', label: 'Transaction', type: 'string' },
+          { key: 'vendor', label: 'Vendor', type: 'string' },
+          { key: 'amount', label: 'Amount', type: 'string' },
+          { key: 'date', label: 'Date', type: 'string' },
+          { key: 'status', label: 'Status', type: 'string' },
+        ],
+      },
+      rows: {
+        type: 'json',
+        label: 'Rows',
+        defaultValue: [
+          { id: 'TXN-0941', type: 'Vendor Payout', vendor: 'Vertex Tech Ltd', amount: '₹4,12,500', date: '12 Aug 2026', status: 'Approved' },
+          { id: 'TXN-0892', type: 'Tax Retainer', vendor: 'Crest Advisory', amount: '₹75,000', date: '11 Aug 2026', status: 'Pending' },
+          { id: 'TXN-0740', type: 'Cloud SaaS', vendor: 'AWS Inc.', amount: '₹2,10,000', date: '09 Aug 2026', status: 'Approved' },
+        ],
+      },
     },
   },
   CHART_PLACEHOLDER: {

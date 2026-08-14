@@ -344,14 +344,26 @@ export default function ComponentResolver({ node }: ComponentResolverProps) {
 
   // 7. DATA_TABLE Component Renders
   const renderDataTable = () => {
-    const { title, density } = node.props;
+    const { title, density, columns, rows } = node.props;
     const isCompact = density === "compact";
 
-    const rows = [
-      { id: "TXN-0941", type: "Vendor Payout", vendor: "Vertex Tech Ltd", amount: "₹4,12,500", date: "12 Aug 2026", status: "Approved" },
-      { id: "TXN-0892", type: "Tax Retainer", vendor: "Crest Advisory", amount: "₹75,000", date: "11 Aug 2026", status: "Pending" },
-      { id: "TXN-0740", type: "Cloud SaaS", vendor: "AWS Inc.", amount: "₹2,10,000", date: "09 Aug 2026", status: "Approved" },
+    const DEFAULT_COLUMNS = [
+      { key: 'id', label: 'ID', type: 'string' },
+      { key: 'type', label: 'Transaction', type: 'string' },
+      { key: 'vendor', label: 'Vendor', type: 'string' },
+      { key: 'amount', label: 'Amount', type: 'string' },
+      { key: 'date', label: 'Date', type: 'string' },
+      { key: 'status', label: 'Status', type: 'string' },
     ];
+
+    const DEFAULT_ROWS = [
+      { id: 'TXN-0941', type: 'Vendor Payout', vendor: 'Vertex Tech Ltd', amount: '₹4,12,500', date: '12 Aug 2026', status: 'Approved' },
+      { id: 'TXN-0892', type: 'Tax Retainer', vendor: 'Crest Advisory', amount: '₹75,000', date: '11 Aug 2026', status: 'Pending' },
+      { id: 'TXN-0740', type: 'Cloud SaaS', vendor: 'AWS Inc.', amount: '₹2,10,000', date: '09 Aug 2026', status: 'Approved' },
+    ];
+
+    const activeColumns = columns !== undefined ? columns : DEFAULT_COLUMNS;
+    const activeRows = rows !== undefined ? rows : DEFAULT_ROWS;
 
     return (
       <div className="w-full bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden">
@@ -367,31 +379,51 @@ export default function ComponentResolver({ node }: ComponentResolverProps) {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/20 text-slate-400 font-mono text-[9px] uppercase font-bold tracking-wider">
-                <th className={`${isCompact ? "py-1.5 px-3" : "py-2.5 px-4"}`}>ID</th>
-                <th className={`${isCompact ? "py-1.5 px-3" : "py-2.5 px-4"}`}>Transaction</th>
-                <th className={`${isCompact ? "py-1.5 px-3" : "py-2.5 px-4"}`}>Vendor</th>
-                <th className={`${isCompact ? "py-1.5 px-3" : "py-2.5 px-4"}`}>Amount</th>
-                <th className={`${isCompact ? "py-1.5 px-3" : "py-2.5 px-4"}`}>Date</th>
-                <th className={`${isCompact ? "py-1.5 px-3" : "py-2.5 px-4"}`}>Status</th>
+                {activeColumns.map((col: any) => (
+                  <th key={col.key} className={`${isCompact ? "py-1.5 px-3" : "py-2.5 px-4"}`}>
+                    {col.label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100/50">
-              {rows.map((row) => (
-                <tr key={row.id} className="text-xs text-slate-600 hover:bg-slate-50/30 transition-colors">
-                  <td className={`${isCompact ? "py-1.5 px-3" : "py-2 px-4"} font-mono font-medium text-slate-400`}>{row.id}</td>
-                  <td className={`${isCompact ? "py-1.5 px-3" : "py-2 px-4"} font-medium text-slate-800`}>{row.type}</td>
-                  <td className={`${isCompact ? "py-1.5 px-3" : "py-2 px-4"} font-medium`}>{row.vendor}</td>
-                  <td className={`${isCompact ? "py-1.5 px-3" : "py-2 px-4"} font-mono font-semibold text-slate-800`}>{row.amount}</td>
-                  <td className={`${isCompact ? "py-1.5 px-3" : "py-2 px-4"} text-slate-400 font-medium`}>{row.date}</td>
-                  <td className={`${isCompact ? "py-1.5 px-3" : "py-2 px-4"}`}>
-                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${
-                      row.status === "Approved" 
-                        ? "bg-emerald-50 text-emerald-600" 
-                        : "bg-amber-50 text-amber-600"
-                    }`}>
-                      {row.status}
-                    </span>
-                  </td>
+              {activeRows.map((row: any, rIdx: number) => (
+                <tr key={row.id || rIdx} className="text-xs text-slate-600 hover:bg-slate-50/30 transition-colors">
+                  {activeColumns.map((col: any) => {
+                    const val = row[col.key] !== undefined ? row[col.key] : "";
+                    
+                    if (col.key === "status") {
+                      return (
+                        <td key={col.key} className={`${isCompact ? "py-1.5 px-3" : "py-2 px-4"}`}>
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${
+                            val === "Approved" 
+                              ? "bg-emerald-50 text-emerald-600" 
+                              : "bg-amber-50 text-amber-600"
+                          }`}>
+                            {String(val)}
+                          </span>
+                        </td>
+                      );
+                    }
+
+                    const isId = col.key === "id";
+                    const isType = col.key === "type";
+                    const isAmount = col.key === "amount";
+                    const isDate = col.key === "date";
+                    
+                    const cellClassName = `${isCompact ? "py-1.5 px-3" : "py-2 px-4"} ${
+                      isId ? "font-mono font-medium text-slate-400" :
+                      isType ? "font-medium text-slate-800" :
+                      isAmount ? "font-mono font-semibold text-slate-800" :
+                      isDate ? "text-slate-400 font-medium" : "font-medium"
+                    }`;
+
+                    return (
+                      <td key={col.key} className={cellClassName}>
+                        {col.type === 'boolean' ? (val ? "Yes" : "No") : String(val)}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>

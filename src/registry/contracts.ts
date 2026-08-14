@@ -1,4 +1,4 @@
-export type PropertyType = 'string' | 'number' | 'boolean' | 'enum';
+export type PropertyType = 'string' | 'number' | 'boolean' | 'enum' | 'json';
 
 export interface PropertySchema {
   type: PropertyType;

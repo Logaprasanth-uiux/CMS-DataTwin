@@ -3,8 +3,8 @@
 import { useEditorStore } from "@/store/editorStore";
 import { COMPONENT_REGISTRY } from "@/registry";
 import { DocumentNode } from "@/types/document";
-import { Sliders, Settings, Text, Palette, Layout, Trash2, Copy, FileText, Layers } from "lucide-react";
-import React from "react";
+import { Sliders, Settings, Text, Palette, Layout, Trash2, Copy, FileText, Layers, Plus, ArrowUp, ArrowDown, Edit2, Check, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
 
 // Recursive search helper to locate the selected node in the document layout
 const findNodeById = (node: DocumentNode, id: string): DocumentNode | null => {
@@ -20,7 +20,7 @@ const findNodeById = (node: DocumentNode, id: string): DocumentNode | null => {
 
 // Categorize property keys for clean logical grouping
 const PROPERTY_GROUPS = {
-  content: ["label", "value", "cardIconName", "change", "trendText", "showTrendIcon", "positive", "description", "title", "message", "text"],
+  content: ["label", "value", "cardIconName", "change", "trendText", "showTrendIcon", "positive", "description", "title", "columns", "rows", "message", "text"],
   appearance: [
     "titleColor",
     "valueColor",
@@ -67,6 +67,564 @@ const ColorPickerField = ({ value, onChange }: { value: string; onChange: (val: 
   );
 };
 
+const renameColumnKey = (oldKey: string, newKey: string, currentRows: any[]) => {
+  return currentRows.map(row => {
+    const newRow = { ...row };
+    if (oldKey in newRow) {
+      newRow[newKey] = newRow[oldKey];
+      delete newRow[oldKey];
+    }
+    return newRow;
+  });
+};
+
+const deleteColumnKey = (key: string, currentRows: any[]) => {
+  return currentRows.map(row => {
+    const newRow = { ...row };
+    delete newRow[key];
+    return newRow;
+  });
+};
+
+const addColumnKey = (key: string, type: string, currentRows: any[]) => {
+  const defaultVal = type === 'number' ? 0 : type === 'boolean' ? false : "";
+  return currentRows.map(row => {
+    const newRow = { ...row };
+    if (!(key in newRow)) {
+      newRow[key] = defaultVal;
+    }
+    return newRow;
+  });
+};
+
+function ColumnsEditor({
+  columns,
+  onChange,
+  rows,
+  onRowsChange,
+}: {
+  columns: any[];
+  onChange: (cols: any[]) => void;
+  rows: any[];
+  onRowsChange: (rows: any[]) => void;
+}) {
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const [editLabel, setEditLabel] = useState("");
+  const [editKey, setEditKey] = useState("");
+  const [editType, setEditType] = useState<"string" | "number" | "boolean">("string");
+
+  const [newLabel, setNewLabel] = useState("");
+  const [newKey, setNewKey] = useState("");
+  const [newType, setNewType] = useState<"string" | "number" | "boolean">("string");
+
+  const handleStartEdit = (index: number) => {
+    const col = columns[index];
+    setEditingIndex(index);
+    setEditLabel(col.label);
+    setEditKey(col.key);
+    setEditType(col.type || "string");
+    setIsAdding(false);
+  };
+
+  const handleSaveEdit = (index: number) => {
+    const oldCol = columns[index];
+    const newColKey = editKey.trim() || oldCol.key;
+    const newColLabel = editLabel.trim() || oldCol.label;
+    
+    const updatedCols = [...columns];
+    updatedCols[index] = {
+      ...oldCol,
+      label: newColLabel,
+      key: newColKey,
+      type: editType,
+    };
+    
+    let updatedRows = rows;
+    if (oldCol.key !== newColKey) {
+      updatedRows = renameColumnKey(oldCol.key, newColKey, rows);
+    }
+    
+    if (oldCol.type !== editType) {
+      updatedRows = updatedRows.map(row => {
+        const newRow = { ...row };
+        const val = newRow[newColKey];
+        if (editType === 'number') {
+          const num = Number(val);
+          newRow[newColKey] = isNaN(num) ? 0 : num;
+        } else if (editType === 'boolean') {
+          newRow[newColKey] = !!val;
+        } else {
+          newRow[newColKey] = val === undefined || val === null ? "" : String(val);
+        }
+        return newRow;
+      });
+    }
+
+    onChange(updatedCols);
+    onRowsChange(updatedRows);
+    setEditingIndex(null);
+  };
+
+  const handleAddColumn = () => {
+    const key = newKey.trim();
+    const label = newLabel.trim();
+    if (!key || !label) {
+      alert("Key and Label are required.");
+      return;
+    }
+    if (columns.some(c => c.key === key)) {
+      alert("A column with this key already exists.");
+      return;
+    }
+
+    const newCol = { key, label, type: newType };
+    const updatedCols = [...columns, newCol];
+    const updatedRows = addColumnKey(key, newType, rows);
+
+    onChange(updatedCols);
+    onRowsChange(updatedRows);
+    setIsAdding(false);
+    setNewKey("");
+    setNewLabel("");
+    setNewType("string");
+  };
+
+  const handleDeleteColumn = (index: number) => {
+    const colToDelete = columns[index];
+    const updatedCols = columns.filter((_, i) => i !== index);
+    const updatedRows = deleteColumnKey(colToDelete.key, rows);
+
+    onChange(updatedCols);
+    onRowsChange(updatedRows);
+    if (editingIndex === index) {
+      setEditingIndex(null);
+    }
+  };
+
+  const handleMoveColumn = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= columns.length) return;
+
+    const updatedCols = [...columns];
+    const temp = updatedCols[index];
+    updatedCols[index] = updatedCols[newIndex];
+    updatedCols[newIndex] = temp;
+    onChange(updatedCols);
+    
+    if (editingIndex === index) {
+      setEditingIndex(newIndex);
+    } else if (editingIndex === newIndex) {
+      setEditingIndex(index);
+    }
+  };
+
+  return (
+    <div className="space-y-2 border border-slate-200 rounded-md p-2 bg-slate-50/50">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Columns ({columns.length})</span>
+        {!isAdding && editingIndex === null && (
+          <button
+            type="button"
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-1 text-[9px] font-bold text-blue-600 hover:text-blue-700 bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-sm cursor-pointer"
+          >
+            <Plus size={10} />
+            <span>Add Column</span>
+          </button>
+        )}
+      </div>
+
+      {isAdding && (
+        <div className="border border-slate-200 rounded p-2 bg-white space-y-2 text-[10px]">
+          <div className="font-bold text-slate-600">New Column Details</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="space-y-0.5">
+              <label className="text-[8px] font-semibold text-slate-400">Label</label>
+              <input
+                type="text"
+                placeholder="e.g. Vendor"
+                value={newLabel}
+                onChange={e => {
+                  setNewLabel(e.target.value);
+                  if (!newKey) {
+                    setNewKey(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""));
+                  }
+                }}
+                className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+              />
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[8px] font-semibold text-slate-400">Field Key</label>
+              <input
+                type="text"
+                placeholder="e.g. vendor"
+                value={newKey}
+                onChange={e => setNewKey(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+                className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+              />
+            </div>
+          </div>
+          <div className="space-y-0.5">
+            <label className="text-[8px] font-semibold text-slate-400">Data Type</label>
+            <select
+              value={newType}
+              onChange={e => setNewType(e.target.value as any)}
+              className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+            >
+              <option value="string">String (Text)</option>
+              <option value="number">Number (Numeric)</option>
+              <option value="boolean">Boolean (Yes/No)</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={() => setIsAdding(false)}
+              className="px-2 py-0.5 border border-slate-200 rounded hover:bg-slate-50 cursor-pointer text-slate-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAddColumn}
+              className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded cursor-pointer font-semibold"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
+
+      {editingIndex !== null && (
+        <div className="border border-slate-200 rounded p-2 bg-white space-y-2 text-[10px]">
+          <div className="font-bold text-slate-600">Edit Column Details</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="space-y-0.5">
+              <label className="text-[8px] font-semibold text-slate-400">Label</label>
+              <input
+                type="text"
+                value={editLabel}
+                onChange={e => setEditLabel(e.target.value)}
+                className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+              />
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[8px] font-semibold text-slate-400">Field Key</label>
+              <input
+                type="text"
+                value={editKey}
+                onChange={e => setEditKey(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+                className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+              />
+            </div>
+          </div>
+          <div className="space-y-0.5">
+            <label className="text-[8px] font-semibold text-slate-400">Data Type</label>
+            <select
+              value={editType}
+              onChange={e => setEditType(e.target.value as any)}
+              className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+            >
+              <option value="string">String (Text)</option>
+              <option value="number">Number (Numeric)</option>
+              <option value="boolean">Boolean (Yes/No)</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={() => setEditingIndex(null)}
+              className="px-2 py-0.5 border border-slate-200 rounded hover:bg-slate-50 cursor-pointer text-slate-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSaveEdit(editingIndex)}
+              className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded cursor-pointer font-semibold"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-1 max-h-[180px] overflow-y-auto pr-1">
+        {columns.map((col, index) => {
+          const isCurrentEditing = editingIndex === index;
+          return (
+            <div
+              key={col.key || index}
+              className={`flex items-center justify-between p-1.5 rounded border text-[10px] transition-colors ${
+                isCurrentEditing
+                  ? "border-blue-500 bg-blue-50/10"
+                  : "border-slate-100 bg-white"
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className="font-semibold text-slate-800 block truncate">{col.label}</span>
+                <span className="font-mono text-[8px] text-slate-400 truncate block mt-0.5">
+                  key: {col.key} &bull; type: {col.type || "string"}
+                </span>
+              </div>
+              <div className="flex items-center gap-0.5 shrink-0 ml-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleMoveColumn(index, "up")}
+                  disabled={index === 0}
+                  className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                  title="Move Up"
+                >
+                  <ArrowUp size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMoveColumn(index, "down")}
+                  disabled={index === columns.length - 1}
+                  className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                  title="Move Down"
+                >
+                  <ArrowDown size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(index)}
+                  className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 cursor-pointer"
+                  title="Edit Column"
+                >
+                  <Edit2 size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteColumn(index)}
+                  className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-slate-100 cursor-pointer"
+                  title="Delete Column"
+                >
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RowsEditor({
+  columns,
+  rows,
+  onChange,
+}: {
+  columns: any[];
+  rows: any[];
+  onChange: (rows: any[]) => void;
+}) {
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  const handleStartEdit = (index: number) => {
+    setEditingIndex(index);
+  };
+
+  const handleSaveCellChange = (rowIndex: number, colKey: string, val: any) => {
+    const updatedRows = [...rows];
+    updatedRows[rowIndex] = {
+      ...updatedRows[rowIndex],
+      [colKey]: val,
+    };
+    onChange(updatedRows);
+  };
+
+  const handleAddRow = () => {
+    const newRow: Record<string, any> = {};
+    columns.forEach(col => {
+      newRow[col.key] = col.type === 'number' ? 0 : col.type === 'boolean' ? false : "";
+    });
+    
+    if ('id' in newRow) {
+      newRow['id'] = `TXN-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+    
+    onChange([...rows, newRow]);
+    setEditingIndex(rows.length);
+  };
+
+  const handleDeleteRow = (index: number) => {
+    const updatedRows = rows.filter((_, i) => i !== index);
+    onChange(updatedRows);
+    if (editingIndex === index) {
+      setEditingIndex(null);
+    } else if (editingIndex !== null && editingIndex > index) {
+      setEditingIndex(editingIndex - 1);
+    }
+  };
+
+  const handleMoveRow = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= rows.length) return;
+
+    const updatedRows = [...rows];
+    const temp = updatedRows[index];
+    updatedRows[index] = updatedRows[newIndex];
+    updatedRows[newIndex] = temp;
+    onChange(updatedRows);
+
+    if (editingIndex === index) {
+      setEditingIndex(newIndex);
+    } else if (editingIndex === newIndex) {
+      setEditingIndex(index);
+    }
+  };
+
+  return (
+    <div className="space-y-2 border border-slate-200 rounded-md p-2 bg-slate-50/50">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rows ({rows.length})</span>
+        <button
+          type="button"
+          onClick={handleAddRow}
+          className="flex items-center gap-1 text-[9px] font-bold text-blue-600 hover:text-blue-700 bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-sm cursor-pointer"
+        >
+          <Plus size={10} />
+          <span>Add Row</span>
+        </button>
+      </div>
+
+      {editingIndex !== null && editingIndex < rows.length && (
+        <div className="border border-slate-200 rounded p-2.5 bg-white space-y-2 text-[10px]">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-1">
+            <span className="font-bold text-slate-600">Editing Row {editingIndex + 1} Cells</span>
+            <button
+              type="button"
+              onClick={() => setEditingIndex(null)}
+              className="text-slate-400 hover:text-slate-700 p-0.5"
+            >
+              <X size={12} />
+            </button>
+          </div>
+
+          <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+            {columns.map(col => {
+              const rowData = rows[editingIndex];
+              const cellValue = rowData[col.key] !== undefined ? rowData[col.key] : "";
+              
+              return (
+                <div key={col.key} className="space-y-0.5">
+                  <label className="text-[8px] font-semibold text-slate-500 uppercase tracking-wide">
+                    {col.label} ({col.key})
+                  </label>
+                  {col.type === 'boolean' ? (
+                    <div className="flex bg-slate-100 p-0.5 rounded gap-0.5 w-full">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveCellChange(editingIndex, col.key, true)}
+                        className={`flex-1 text-[9px] font-bold py-0.5 px-1 rounded transition-all select-none cursor-pointer text-center ${
+                          cellValue === true ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        Yes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveCellChange(editingIndex, col.key, false)}
+                        className={`flex-1 text-[9px] font-bold py-0.5 px-1 rounded transition-all select-none cursor-pointer text-center ${
+                          cellValue === false ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : col.type === 'number' ? (
+                    <input
+                      type="number"
+                      value={cellValue}
+                      onChange={e => handleSaveCellChange(editingIndex, col.key, Number(e.target.value))}
+                      className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={cellValue}
+                      onChange={e => handleSaveCellChange(editingIndex, col.key, e.target.value)}
+                      className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-1 max-h-[180px] overflow-y-auto pr-1">
+        {rows.map((row, index) => {
+          const isCurrentEditing = editingIndex === index;
+          const firstCol = columns[0];
+          const secondCol = columns[1];
+          const previewText1 = firstCol ? `${firstCol.label}: ${row[firstCol.key] || ""}` : "";
+          const previewText2 = secondCol ? `${secondCol.label}: ${row[secondCol.key] || ""}` : "";
+          const previewString = [previewText1, previewText2].filter(Boolean).join(" | ");
+
+          return (
+            <div
+              key={index}
+              className={`flex items-center justify-between p-1.5 rounded border text-[10px] transition-colors ${
+                isCurrentEditing
+                  ? "border-blue-500 bg-blue-50/10"
+                  : "border-slate-100 bg-white"
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className="font-semibold text-slate-800 block">Row {index + 1}</span>
+                <span className="text-[8px] text-slate-400 block truncate mt-0.5 font-medium leading-none">
+                  {previewString || "(No values)"}
+                </span>
+              </div>
+              <div className="flex items-center gap-0.5 shrink-0 ml-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleMoveRow(index, "up")}
+                  disabled={index === 0}
+                  className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                  title="Move Up"
+                >
+                  <ArrowUp size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMoveRow(index, "down")}
+                  disabled={index === rows.length - 1}
+                  className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                  title="Move Down"
+                >
+                  <ArrowDown size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(index)}
+                  className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 cursor-pointer"
+                  title="Edit Row Cells"
+                >
+                  <Edit2 size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteRow(index)}
+                  className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-slate-100 cursor-pointer"
+                  title="Delete Row"
+                >
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function PropertiesInspector() {
   const { pages, activePageId, selectedNodeId, updateNodeProps, removeNode, duplicateNode, renameNode, updatePageMetadata } = useEditorStore();
@@ -335,6 +893,31 @@ export default function PropertiesInspector() {
             ))}
           </select>
         );
+      case "json":
+        if (key === "columns") {
+          const currentColumns = value || [];
+          const currentRows = selectedNode.props.rows !== undefined ? selectedNode.props.rows : (contract.properties.rows?.defaultValue || []);
+          return (
+            <ColumnsEditor
+              columns={currentColumns}
+              onChange={handleFieldChange}
+              rows={currentRows}
+              onRowsChange={(updatedRows) => updateNodeProps(selectedNode.id, { rows: updatedRows })}
+            />
+          );
+        }
+        if (key === "rows") {
+          const currentRows = value || [];
+          const currentColumns = selectedNode.props.columns !== undefined ? selectedNode.props.columns : (contract.properties.columns?.defaultValue || []);
+          return (
+            <RowsEditor
+              columns={currentColumns}
+              rows={currentRows}
+              onChange={handleFieldChange}
+            />
+          );
+        }
+        return null;
       default:
         return null;
     }
