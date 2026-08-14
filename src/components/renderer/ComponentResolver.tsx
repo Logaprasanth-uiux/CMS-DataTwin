@@ -5,7 +5,34 @@ import { DocumentNode } from "@/types/document";
 import { useEditorStore } from "@/store/editorStore";
 import { COMPONENT_REGISTRY } from "@/registry";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { TrendingUp, TrendingDown, Info, ShieldAlert, CheckCircle2, ChevronRight, GripVertical } from "lucide-react";
+import { TrendingUp, TrendingDown, Info, ShieldAlert, CheckCircle2, ChevronRight, GripVertical, Shield, AlertCircle, FileText } from "lucide-react";
+
+const getStatCardIcon = (name: string, color: string) => {
+  const iconProps = { size: 16, color };
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  switch (normalized) {
+    case "shield":
+      return <Shield {...iconProps} />;
+    case "alert":
+    case "alertcircle":
+    case "warning":
+      return <AlertCircle {...iconProps} />;
+    case "check":
+    case "checkcircle2":
+    case "success":
+      return <CheckCircle2 {...iconProps} />;
+    case "file":
+    case "filetext":
+    case "document":
+      return <FileText {...iconProps} />;
+    case "trendingup":
+      return <TrendingUp {...iconProps} />;
+    case "trendingdown":
+      return <TrendingDown {...iconProps} />;
+    default:
+      return null;
+  }
+};
 
 interface ComponentResolverProps {
   node: DocumentNode;
@@ -48,9 +75,30 @@ export default function ComponentResolver({ node }: ComponentResolverProps) {
   const renderChildren = () => {
     if (!node.children || node.children.length === 0) {
       if (!previewMode && ['SECTION', 'CONTAINER', 'GRID', 'STACK'].includes(node.type)) {
+        const allowed = registryEntry.allowedChildren || [];
+        const hasLayout = allowed.some(c => COMPONENT_REGISTRY[c]?.category === "layout");
+        const hasContent = allowed.some(c => COMPONENT_REGISTRY[c]?.category !== "layout");
+        
+        let acceptsText = "components";
+        if (hasLayout && hasContent) {
+          acceptsText = "Layout & Content components";
+        } else if (hasLayout) {
+          acceptsText = "Layout components only";
+        } else if (hasContent) {
+          acceptsText = "Content components only";
+        }
+
         return (
-          <div className="py-8 px-4 border border-dashed border-slate-200 rounded-lg text-center text-slate-400 text-[10px] font-bold uppercase tracking-wider bg-slate-50/20 select-none">
-            Drop components inside this {registryEntry.displayName.toLowerCase()}
+          <div className="w-full min-h-[70px] py-4 px-4 border border-dashed border-slate-200 hover:border-slate-300 rounded-lg flex flex-col items-center justify-center bg-slate-50/20 select-none transition-colors">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Empty {registryEntry.displayName}
+            </span>
+            <span className="text-[10px] text-slate-400 mt-0.5">
+              Drop components here to build your layout.
+            </span>
+            <span className="text-[9px] text-slate-400/80 font-mono mt-1">
+              Accepts: {acceptsText}
+            </span>
           </div>
         );
       }
@@ -151,40 +199,105 @@ export default function ComponentResolver({ node }: ComponentResolverProps) {
 
   // 5. STAT_CARD Component Renders
   const renderStatCard = () => {
-    const { label, value, change, positive, gridSpan } = node.props;
+    const {
+      label,
+      value,
+      description,
+      cardIconName,
+      change,
+      trendText,
+      positive,
+      titleColor,
+      valueColor,
+      trendColor,
+      descriptionColor,
+      iconColor,
+      gridSpan,
+      showTrendIcon,
+    } = node.props;
 
     const spanStyle: React.CSSProperties = gridSpan 
       ? { gridColumn: `span ${gridSpan} / span ${gridSpan}` } 
       : {};
 
+    const containerStyle: React.CSSProperties = {
+      ...spanStyle,
+      backgroundColor: "#FFFFFF",
+      borderColor: "#E2E8F0",
+      borderRadius: "12px",
+      borderWidth: "1px",
+      borderStyle: "solid",
+    };
+
+    // Colors
+    const tColor = titleColor || "#64748B";
+    const vColor = valueColor || "#0F172A";
+    const trColor = trendColor || "#64748B";
+    const dColor = descriptionColor || "#64748B";
+    const iColor = iconColor || "#64748B";
+
+    const activeIconName = cardIconName !== undefined ? cardIconName : (node.props.iconName || node.props.icon || "Shield");
+    const cardIcon = activeIconName ? getStatCardIcon(activeIconName, iColor) : null;
+
+    // Render logic for bottom description or trend
+    const hasDescription = description !== undefined && description !== "";
+    const hasTrend = change !== undefined && change !== "";
+    const activeShowTrendIcon = showTrendIcon !== undefined ? showTrendIcon : true;
+
     return (
       <div
-        style={spanStyle}
-        className="flex flex-col gap-2 rounded-lg p-4 border border-slate-100 shadow-sm bg-white hover:shadow transition-all min-h-[96px]"
+        style={containerStyle}
+        className="flex flex-col p-4 w-full select-none justify-between gap-3 shadow-sm hover:shadow-md transition-all duration-150 min-h-[110px]"
       >
-        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">
-          {label || "Stat Label"}
-        </span>
-        <span className="text-2xl font-semibold tracking-tight text-slate-800 leading-none mt-0.5">
-          {value || "₹0.00"}
-        </span>
-        <div className="flex items-center gap-1.5 mt-auto text-[10px] text-slate-400 font-medium whitespace-nowrap select-none">
-          <div className="flex items-center gap-1 shrink-0">
-            {positive ? (
-              <TrendingUp size={12} className="text-emerald-500" />
-            ) : (
-              <TrendingDown size={12} className="text-red-500" />
-            )}
-            <span
-              className={`text-xs font-mono font-bold leading-none ${
-                positive ? "text-emerald-500" : "text-red-500"
-              }`}
-            >
-              {change || "0.0%"}
-            </span>
-          </div>
-          <span className="text-[10px] text-slate-400">vs last month</span>
+        {/* Top Row: Title and Icon */}
+        <div className="flex items-start justify-between gap-4">
+          <span
+            style={{ color: tColor }}
+            className="text-[10px] font-bold uppercase tracking-wider leading-none truncate max-w-[85%]"
+          >
+            {label || "Metric Title"}
+          </span>
+          {cardIcon && (
+            <div className="shrink-0 leading-none">
+              {cardIcon}
+            </div>
+          )}
         </div>
+
+        {/* Main Value */}
+        <div
+          style={{ color: vColor }}
+          className="text-2xl font-bold tracking-tight leading-none mt-1 break-words select-all"
+        >
+          {value || "0"}
+        </div>
+
+        {/* Bottom Section: Explicit Description OR Trend Fallback */}
+        {hasDescription ? (
+          <div
+            style={{ color: dColor }}
+            className="text-[10px] font-medium leading-relaxed select-all break-words"
+          >
+            {description}
+          </div>
+        ) : hasTrend ? (
+          <div
+            style={{ color: trColor }}
+            className="text-[10px] font-medium leading-relaxed select-all flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <div className="flex items-center gap-1 shrink-0">
+              {activeShowTrendIcon && (positive !== false ? (
+                <TrendingUp size={11} style={{ color: trColor }} className="shrink-0" />
+              ) : (
+                <TrendingDown size={11} style={{ color: trColor }} className="shrink-0" />
+              ))}
+              <span className="font-mono font-bold leading-none">
+                {change}{!change.endsWith("%") && "%"}
+              </span>
+            </div>
+            <span className="font-medium">{trendText || "vs last month"}</span>
+          </div>
+        ) : null}
       </div>
     );
   };

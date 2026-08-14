@@ -130,6 +130,8 @@ export default function PagesHome() {
                         className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold font-mono tracking-wide uppercase ${
                           page.status === "Published"
                             ? "bg-emerald-50 text-emerald-600 border border-emerald-100/50"
+                            : page.status === "Under Review"
+                            ? "bg-blue-50 text-blue-600 border border-blue-100/50"
                             : "bg-amber-50 text-amber-600 border border-amber-100/50"
                         }`}
                       >

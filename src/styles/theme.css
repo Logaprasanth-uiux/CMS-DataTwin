@@ -10,7 +10,7 @@
   
   /* Panel Colors */
   --panel-bg: #ffffff;
-  --panel-border: rgba(0, 0, 0, 0.06);
+  --panel-border: #E2E8F0;
   --panel-header-bg: #fafbfc;
   
   /* Accents */
@@ -54,6 +54,7 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--panel-border);
+  --color-panel-border: var(--panel-border);
   
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);

@@ -9,6 +9,7 @@ const initialPages: Record<string, PageDocument> = {
     id: 'finance-overview',
     name: 'Finance Overview',
     type: 'Dashboard',
+    description: 'Enterprise financial overview dashboard displaying core operational layout metrics.',
     status: 'Published',
     version: 1,
     layout: {
@@ -42,6 +43,7 @@ const initialPages: Record<string, PageDocument> = {
                     value: '₹2.4M',
                     change: '+12.4%',
                     positive: true,
+                    cardIconName: 'CheckCircle2',
                     gridSpan: 4,
                   },
                 },
@@ -53,6 +55,7 @@ const initialPages: Record<string, PageDocument> = {
                     value: '₹450K',
                     change: '-4.2%',
                     positive: false,
+                    cardIconName: 'Shield',
                     gridSpan: 4,
                   },
                 },
@@ -64,6 +67,7 @@ const initialPages: Record<string, PageDocument> = {
                     value: '85',
                     change: '+8.3%',
                     positive: true,
+                    cardIconName: 'AlertCircle',
                     gridSpan: 4,
                   },
                 },
@@ -135,6 +139,7 @@ const initialPages: Record<string, PageDocument> = {
     id: 'transaction-hub',
     name: 'Transaction Hub',
     type: 'Workspace',
+    description: 'Operational sync workspace for processing and reconciling financial payouts.',
     status: 'Draft',
     version: 1,
     layout: {
@@ -168,6 +173,7 @@ const initialPages: Record<string, PageDocument> = {
                     value: '25,482',
                     change: '+14.2%',
                     positive: true,
+                    cardIconName: 'FileText',
                     gridSpan: 6,
                   },
                 },
@@ -179,6 +185,7 @@ const initialPages: Record<string, PageDocument> = {
                     value: '14',
                     change: '-50.0%',
                     positive: true,
+                    cardIconName: 'AlertCircle',
                     gridSpan: 6,
                   },
                 },
@@ -213,6 +220,7 @@ const initialPages: Record<string, PageDocument> = {
     id: 'accounts-payable',
     name: 'Accounts Payable',
     type: 'Dashboard',
+    description: 'Tracking metrics ledger for pending, reconciled, and audited vendor invoice records.',
     status: 'Published',
     version: 1,
     layout: {
@@ -247,6 +255,7 @@ const initialPages: Record<string, PageDocument> = {
     id: 'accounts-receivable',
     name: 'Accounts Receivable',
     type: 'Workspace',
+    description: 'Operational analytics view displaying customer payout donut graphs and invoice summaries.',
     status: 'Draft',
     version: 1,
     layout: {
@@ -342,6 +351,8 @@ interface EditorState {
   
   // Mutations
   updateNodeProps: (id: string, props: Record<string, any>) => void;
+  renameNode: (nodeId: string, customLabel: string | undefined) => void;
+  updatePageMetadata: (pageId: string, metadata: { name?: string; description?: string; status?: 'Draft' | 'Under Review' | 'Published' }) => void;
   addNode: (parentId: string, node: Omit<DocumentNode, 'id'> & { id?: string }, index?: number) => void;
   removeNode: (id: string) => void;
   duplicateNode: (id: string) => void;
@@ -394,6 +405,7 @@ export const useEditorStore = create<EditorState>()(
         id: pageId,
         name: name || 'New Page',
         type: type || 'Page',
+        description: '',
         status: 'Draft',
         version: 1,
         layout: {
@@ -617,6 +629,34 @@ export const useEditorStore = create<EditorState>()(
           
           targetParent.children.splice(insertIndex, 0, nodeToMove);
         }
+      }),
+
+    renameNode: (nodeId, customLabel) =>
+      set((state) => {
+        const pageId = state.activePageId;
+        if (!pageId || !state.pages[pageId]) return;
+
+        const activePage = state.pages[pageId];
+        state.past.push(JSON.parse(JSON.stringify(activePage)));
+        state.future = [];
+
+        const targetNode = findNode(activePage.layout, nodeId);
+        if (targetNode) {
+          targetNode.customLabel = customLabel || undefined;
+        }
+      }),
+
+    updatePageMetadata: (pageId, metadata) =>
+      set((state) => {
+        if (!state.pages[pageId]) return;
+        
+        state.past.push(JSON.parse(JSON.stringify(state.pages[pageId])));
+        state.future = [];
+
+        const page = state.pages[pageId];
+        if (metadata.name !== undefined) page.name = metadata.name;
+        if (metadata.description !== undefined) page.description = metadata.description;
+        if (metadata.status !== undefined) page.status = metadata.status;
       }),
   }))
 );

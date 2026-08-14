@@ -139,17 +139,69 @@ export const COMPONENT_REGISTRY: Record<string, ComponentContract> = {
       value: {
         type: 'string',
         label: 'Value Display',
-        defaultValue: '₹0.00',
+        defaultValue: '0',
+      },
+      description: {
+        type: 'string',
+        label: 'Bottom Description',
+        defaultValue: '',
+      },
+      cardIconName: {
+        type: 'enum',
+        label: 'Icon',
+        defaultValue: 'Shield',
+        options: [
+          { label: 'None', value: '' },
+          { label: 'Shield (Blockers)', value: 'Shield' },
+          { label: 'Warning (Issues)', value: 'AlertCircle' },
+          { label: 'Check (Success)', value: 'CheckCircle2' },
+          { label: 'Document (Report)', value: 'FileText' },
+        ],
       },
       change: {
         type: 'string',
-        label: 'Change Percentage',
-        defaultValue: '0.0%',
+        label: 'Percentage',
+        defaultValue: '0.0',
+      },
+      trendText: {
+        type: 'string',
+        label: 'Trend Text',
+        defaultValue: 'vs last month',
       },
       positive: {
         type: 'boolean',
         label: 'Is Positive Trend',
         defaultValue: true,
+      },
+      showTrendIcon: {
+        type: 'boolean',
+        label: 'Show Trend Icon',
+        defaultValue: true,
+      },
+      titleColor: {
+        type: 'string',
+        label: 'Title Color',
+        defaultValue: '#64748B',
+      },
+      valueColor: {
+        type: 'string',
+        label: 'Value Color',
+        defaultValue: '#0F172A',
+      },
+      trendColor: {
+        type: 'string',
+        label: 'Trend Color',
+        defaultValue: '#64748B',
+      },
+      descriptionColor: {
+        type: 'string',
+        label: 'Description Color',
+        defaultValue: '#64748B',
+      },
+      iconColor: {
+        type: 'string',
+        label: 'Icon Color',
+        defaultValue: '#64748B',
       },
       gridSpan: {
         type: 'enum',
