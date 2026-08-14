@@ -354,6 +354,7 @@ interface EditorState {
   renameNode: (nodeId: string, customLabel: string | undefined) => void;
   updatePageMetadata: (pageId: string, metadata: { name?: string; description?: string; status?: 'Draft' | 'Under Review' | 'Published' }) => void;
   addNode: (parentId: string, node: Omit<DocumentNode, 'id'> & { id?: string }, index?: number) => void;
+  updateNodeChildren: (id: string, children: DocumentNode[]) => void;
   removeNode: (id: string) => void;
   duplicateNode: (id: string) => void;
   moveNode: (nodeId: string, targetParentId: string, index: number, intent: 'before' | 'after' | 'inside') => void;
@@ -508,6 +509,18 @@ export const useEditorStore = create<EditorState>()(
         updateNodeInTree(state.pages[pageId].layout, id, props);
       }),
 
+    updateNodeChildren: (id, children) =>
+      set((state) => {
+        const pageId = state.activePageId;
+        if (!pageId || !state.pages[pageId]) return;
+
+        const activePage = state.pages[pageId];
+        state.past.push(JSON.parse(JSON.stringify(activePage)));
+        state.future = [];
+
+        updateNodeChildrenInTree(activePage.layout, id, children);
+      }),
+
     addNode: (parentId, node, index) =>
       set((state) => {
         const pageId = state.activePageId;
@@ -517,11 +530,37 @@ export const useEditorStore = create<EditorState>()(
         state.past.push(JSON.parse(JSON.stringify(activePage)));
         state.future = [];
 
+        const nodeChildren = node.children ? [...node.children] : [];
+        if (node.type === "TABS" && nodeChildren.length === 0) {
+          nodeChildren.push(
+            {
+              id: generateId("STACK"),
+              type: "STACK",
+              props: {
+                direction: "vertical",
+                gap: "medium",
+                alignment: "start",
+              },
+              children: [],
+            },
+            {
+              id: generateId("STACK"),
+              type: "STACK",
+              props: {
+                direction: "vertical",
+                gap: "medium",
+                alignment: "start",
+              },
+              children: [],
+            }
+          );
+        }
+
         const fullNode: DocumentNode = {
           id: node.id || generateId(node.type),
           type: node.type,
           props: node.props,
-          children: node.children,
+          children: nodeChildren,
         };
 
         const activeLayout = activePage.layout;
@@ -670,6 +709,19 @@ const updateNodeInTree = (node: DocumentNode, id: string, updatedProps: Record<s
   if (node.children) {
     for (const child of node.children) {
       if (updateNodeInTree(child, id, updatedProps)) return true;
+    }
+  }
+  return false;
+};
+
+const updateNodeChildrenInTree = (node: DocumentNode, id: string, children: DocumentNode[]): boolean => {
+  if (node.id === id) {
+    node.children = children;
+    return true;
+  }
+  if (node.children) {
+    for (const child of node.children) {
+      if (updateNodeChildrenInTree(child, id, children)) return true;
     }
   }
   return false;

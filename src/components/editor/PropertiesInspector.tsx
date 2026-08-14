@@ -20,7 +20,7 @@ const findNodeById = (node: DocumentNode, id: string): DocumentNode | null => {
 
 // Categorize property keys for clean logical grouping
 const PROPERTY_GROUPS = {
-  content: ["label", "value", "cardIconName", "change", "trendText", "showTrendIcon", "positive", "description", "title", "columns", "rows", "message", "text"],
+  content: ["label", "value", "cardIconName", "change", "trendText", "showTrendIcon", "positive", "description", "title", "columns", "rows", "message", "text", "tabs", "activeTabId", "actionLabel", "fieldType", "options"],
   appearance: [
     "titleColor",
     "valueColor",
@@ -35,7 +35,7 @@ const PROPERTY_GROUPS = {
     "density",
     "background"
   ],
-  layout: ["gridSpan", "columns", "gap", "direction", "alignment", "padding", "maxWidth"],
+  layout: ["gridSpan", "columns", "gap", "direction", "alignment", "padding", "maxWidth", "columnCount"],
   behavior: ["action"],
 };
 
@@ -626,8 +626,509 @@ function RowsEditor({
   );
 }
 
+function TabsEditor({
+  tabs,
+  onChange,
+  children,
+  onChildrenChange,
+  activeTabId,
+  onActiveTabChange,
+}: {
+  tabs: any[];
+  onChange: (tabs: any[]) => void;
+  children: any[];
+  onChildrenChange: (children: any[]) => void;
+  activeTabId: string;
+  onActiveTabChange: (activeId: string) => void;
+}) {
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const [editLabel, setEditLabel] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+
+  const handleStartEdit = (index: number) => {
+    setEditingIndex(index);
+    setEditLabel(tabs[index].label);
+    setIsAdding(false);
+  };
+
+  const handleSaveEdit = (index: number) => {
+    const updatedTabs = [...tabs];
+    updatedTabs[index] = {
+      ...updatedTabs[index],
+      label: editLabel.trim() || tabs[index].label,
+    };
+    onChange(updatedTabs);
+    setEditingIndex(null);
+  };
+
+  const handleAddTab = () => {
+    const label = newLabel.trim();
+    if (!label) {
+      alert("Tab label is required.");
+      return;
+    }
+    const tabId = `tab-${Math.random().toString(36).substring(2, 9)}`;
+    const newTab = { id: tabId, label };
+    const updatedTabs = [...tabs, newTab];
+
+    const newChildNode = {
+      id: `container-${Math.random().toString(36).substring(2, 9)}`,
+      type: "STACK" as const,
+      props: {
+        direction: "vertical" as const,
+        gap: "medium" as const,
+        alignment: "start" as const,
+      },
+      children: [],
+    };
+    const updatedChildren = [...children, newChildNode];
+
+    onChange(updatedTabs);
+    onChildrenChange(updatedChildren);
+
+    if (tabs.length === 0) {
+      onActiveTabChange(tabId);
+    }
+
+    setIsAdding(false);
+    setNewLabel("");
+  };
+
+  const handleDeleteTab = (index: number) => {
+    if (tabs.length <= 1) {
+      alert("At least one tab must be preserved.");
+      return;
+    }
+    const tabToDelete = tabs[index];
+    const updatedTabs = tabs.filter((_, i) => i !== index);
+    const updatedChildren = children.filter((_, i) => i !== index);
+
+    onChange(updatedTabs);
+    onChildrenChange(updatedChildren);
+
+    if (activeTabId === tabToDelete.id) {
+      onActiveTabChange(updatedTabs[0]?.id || "");
+    }
+
+    if (editingIndex === index) {
+      setEditingIndex(null);
+    }
+  };
+
+  const handleMoveTab = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= tabs.length) return;
+
+    const updatedTabs = [...tabs];
+    const tempTab = updatedTabs[index];
+    updatedTabs[index] = updatedTabs[newIndex];
+    updatedTabs[newIndex] = tempTab;
+
+    const updatedChildren = [...children];
+    const tempChild = updatedChildren[index];
+    updatedChildren[index] = updatedChildren[newIndex];
+    updatedChildren[newIndex] = tempChild;
+
+    onChange(updatedTabs);
+    onChildrenChange(updatedChildren);
+
+    if (editingIndex === index) {
+      setEditingIndex(newIndex);
+    } else if (editingIndex === newIndex) {
+      setEditingIndex(index);
+    }
+  };
+
+  return (
+    <div className="space-y-2 border border-slate-200 rounded-md p-2 bg-slate-50/50">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tab Pages ({tabs.length})</span>
+        {!isAdding && editingIndex === null && (
+          <button
+            type="button"
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-1 text-[9px] font-bold text-blue-600 hover:text-blue-700 bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-sm cursor-pointer"
+          >
+            <Plus size={10} />
+            <span>Add Tab</span>
+          </button>
+        )}
+      </div>
+
+      {isAdding && (
+        <div className="border border-slate-200 rounded p-2 bg-white space-y-2 text-[10px]">
+          <div className="font-bold text-slate-600">New Tab Details</div>
+          <div className="space-y-0.5">
+            <label className="text-[8px] font-semibold text-slate-400">Tab Label</label>
+            <input
+              type="text"
+              placeholder="e.g. Invoices"
+              value={newLabel}
+              onChange={e => setNewLabel(e.target.value)}
+              className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+            />
+          </div>
+          <div className="flex justify-end gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={() => setIsAdding(false)}
+              className="px-2 py-0.5 border border-slate-200 rounded hover:bg-slate-50 cursor-pointer text-slate-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAddTab}
+              className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded cursor-pointer font-semibold"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
+
+      {editingIndex !== null && (
+        <div className="border border-slate-200 rounded p-2 bg-white space-y-2 text-[10px]">
+          <div className="font-bold text-slate-600">Edit Tab Label</div>
+          <div className="space-y-0.5">
+            <label className="text-[8px] font-semibold text-slate-400">Tab Label</label>
+            <input
+              type="text"
+              value={editLabel}
+              onChange={e => setEditLabel(e.target.value)}
+              className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+            />
+          </div>
+          <div className="flex justify-end gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={() => setEditingIndex(null)}
+              className="px-2 py-0.5 border border-slate-200 rounded hover:bg-slate-50 cursor-pointer text-slate-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSaveEdit(editingIndex)}
+              className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded cursor-pointer font-semibold"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-1 max-h-[180px] overflow-y-auto pr-1">
+        {tabs.map((tab, index) => {
+          const isCurrentEditing = editingIndex === index;
+          return (
+            <div
+              key={tab.id}
+              className={`flex items-center justify-between p-1.5 rounded border text-[10px] transition-colors ${
+                isCurrentEditing
+                  ? "border-blue-500 bg-blue-50/10"
+                  : "border-slate-100 bg-white"
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className="font-semibold text-slate-800 block truncate">{tab.label}</span>
+                <span className="font-mono text-[8px] text-slate-400 truncate block mt-0.5">
+                  ID: {tab.id}
+                </span>
+              </div>
+              <div className="flex items-center gap-0.5 shrink-0 ml-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleMoveTab(index, "up")}
+                  disabled={index === 0}
+                  className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                  title="Move Up"
+                >
+                  <ArrowUp size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMoveTab(index, "down")}
+                  disabled={index === tabs.length - 1}
+                  className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                  title="Move Down"
+                >
+                  <ArrowDown size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(index)}
+                  className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 cursor-pointer"
+                  title="Edit Tab Label"
+                >
+                  <Edit2 size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTab(index)}
+                  disabled={tabs.length <= 1}
+                  className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                  title="Delete Tab"
+                >
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FieldOptionsEditor({
+  options,
+  onChange,
+}: {
+  options: any[];
+  onChange: (opts: any[]) => void;
+}) {
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const [editLabel, setEditLabel] = useState("");
+  const [editValue, setEditValue] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [newValue, setNewValue] = useState("");
+
+  const handleStartEdit = (index: number) => {
+    setEditingIndex(index);
+    setEditLabel(options[index].label);
+    setEditValue(options[index].value);
+    setIsAdding(false);
+  };
+
+  const handleSaveEdit = (index: number) => {
+    const updatedOpts = [...options];
+    updatedOpts[index] = {
+      label: editLabel.trim() || options[index].label,
+      value: editValue.trim() || options[index].value,
+    };
+    onChange(updatedOpts);
+    setEditingIndex(null);
+  };
+
+  const handleAddOption = () => {
+    const label = newLabel.trim();
+    const val = newValue.trim();
+    if (!label || !val) {
+      alert("Label and Value are required.");
+      return;
+    }
+    if (options.some(o => o.value === val)) {
+      alert("An option with this value already exists.");
+      return;
+    }
+    const newOpt = { label, value: val };
+    onChange([...options, newOpt]);
+    setIsAdding(false);
+    setNewLabel("");
+    setNewValue("");
+  };
+
+  const handleDeleteOption = (index: number) => {
+    const updatedOpts = options.filter((_, i) => i !== index);
+    onChange(updatedOpts);
+    if (editingIndex === index) {
+      setEditingIndex(null);
+    }
+  };
+
+  const handleMoveOption = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= options.length) return;
+
+    const updatedOpts = [...options];
+    const temp = updatedOpts[index];
+    updatedOpts[index] = updatedOpts[newIndex];
+    updatedOpts[newIndex] = temp;
+    onChange(updatedOpts);
+
+    if (editingIndex === index) {
+      setEditingIndex(newIndex);
+    } else if (editingIndex === newIndex) {
+      setEditingIndex(index);
+    }
+  };
+
+  return (
+    <div className="space-y-2 border border-slate-200 rounded-md p-2 bg-slate-50/50">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Options ({options.length})</span>
+        {!isAdding && editingIndex === null && (
+          <button
+            type="button"
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-1 text-[9px] font-bold text-blue-600 hover:text-blue-700 bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-sm cursor-pointer"
+          >
+            <Plus size={10} />
+            <span>Add Option</span>
+          </button>
+        )}
+      </div>
+
+      {isAdding && (
+        <div className="border border-slate-200 rounded p-2 bg-white space-y-2 text-[10px]">
+          <div className="font-bold text-slate-600">New Option Details</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="space-y-0.5">
+              <label className="text-[8px] font-semibold text-slate-400">Label</label>
+              <input
+                type="text"
+                placeholder="e.g. Approved"
+                value={newLabel}
+                onChange={e => {
+                  setNewLabel(e.target.value);
+                  if (!newValue) {
+                    setNewValue(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""));
+                  }
+                }}
+                className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+              />
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[8px] font-semibold text-slate-400">Value</label>
+              <input
+                type="text"
+                placeholder="e.g. approved"
+                value={newValue}
+                onChange={e => setNewValue(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+                className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={() => setIsAdding(false)}
+              className="px-2 py-0.5 border border-slate-200 rounded hover:bg-slate-50 cursor-pointer text-slate-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAddOption}
+              className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded cursor-pointer font-semibold"
+            >
+               Add
+            </button>
+          </div>
+        </div>
+      )}
+
+      {editingIndex !== null && (
+        <div className="border border-slate-200 rounded p-2 bg-white space-y-2 text-[10px]">
+          <div className="font-bold text-slate-600">Edit Option Details</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="space-y-0.5">
+              <label className="text-[8px] font-semibold text-slate-400">Label</label>
+              <input
+                type="text"
+                value={editLabel}
+                onChange={e => setEditLabel(e.target.value)}
+                className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+              />
+            </div>
+            <div className="space-y-0.5">
+              <label className="text-[8px] font-semibold text-slate-400">Value</label>
+              <input
+                type="text"
+                value={editValue}
+                onChange={e => setEditValue(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+                className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold focus:bg-white text-slate-800"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={() => setEditingIndex(null)}
+              className="px-2 py-0.5 border border-slate-200 rounded hover:bg-slate-50 cursor-pointer text-slate-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSaveEdit(editingIndex)}
+              className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded cursor-pointer font-semibold"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-1 max-h-[180px] overflow-y-auto pr-1">
+        {options.map((opt, index) => {
+          const isCurrentEditing = editingIndex === index;
+          return (
+            <div
+              key={opt.value || index}
+              className={`flex items-center justify-between p-1.5 rounded border text-[10px] transition-colors ${
+                isCurrentEditing
+                  ? "border-blue-500 bg-blue-50/10"
+                  : "border-slate-100 bg-white"
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className="font-semibold text-slate-800 block truncate">{opt.label}</span>
+                <span className="font-mono text-[8px] text-slate-400 truncate block mt-0.5">
+                  value: {opt.value}
+                </span>
+              </div>
+              <div className="flex items-center gap-0.5 shrink-0 ml-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleMoveOption(index, "up")}
+                  disabled={index === 0}
+                  className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                  title="Move Up"
+                >
+                  <ArrowUp size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMoveOption(index, "down")}
+                  disabled={index === options.length - 1}
+                  className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                  title="Move Down"
+                >
+                  <ArrowDown size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(index)}
+                  className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 cursor-pointer"
+                  title="Edit Option"
+                >
+                  <Edit2 size={10} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteOption(index)}
+                  className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-slate-100 cursor-pointer"
+                  title="Delete Option"
+                >
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function PropertiesInspector() {
-  const { pages, activePageId, selectedNodeId, updateNodeProps, removeNode, duplicateNode, renameNode, updatePageMetadata } = useEditorStore();
+  const { pages, activePageId, selectedNodeId, updateNodeProps, removeNode, duplicateNode, renameNode, updatePageMetadata, updateNodeChildren } = useEditorStore();
   const document = activePageId ? pages[activePageId] : null;
 
   if (!document) {
@@ -811,6 +1312,38 @@ export default function PropertiesInspector() {
 
     switch (schema.type) {
       case "string":
+        if (key === "activeTabId") {
+          const currentTabs = selectedNode.props.tabs || [];
+          return (
+            <select
+              value={value || ""}
+              onChange={(e) => handleFieldChange(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-md focus:bg-white transition-all text-slate-800 font-semibold cursor-pointer"
+            >
+              {currentTabs.map((tab: any) => (
+                <option key={tab.id} value={tab.id}>
+                  {tab.label} ({tab.id})
+                </option>
+              ))}
+            </select>
+          );
+        }
+        if (key === "value" && selectedNode.props.fieldType === "select") {
+          const selectOptions = selectedNode.props.options || [];
+          return (
+            <select
+              value={value || ""}
+              onChange={(e) => handleFieldChange(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-md focus:bg-white transition-all text-slate-800 font-semibold cursor-pointer"
+            >
+              {selectOptions.map((opt: any) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          );
+        }
         return (
           <input
             type="text"
@@ -894,6 +1427,32 @@ export default function PropertiesInspector() {
           </select>
         );
       case "json":
+        if (key === "options") {
+          if (selectedNode.props.fieldType !== "select") {
+            return null;
+          }
+          return (
+            <FieldOptionsEditor
+              options={value || []}
+              onChange={handleFieldChange}
+            />
+          );
+        }
+        if (key === "tabs") {
+          const currentTabs = value || [];
+          const currentChildren = selectedNode.children || [];
+          const activeTabId = selectedNode.props.activeTabId || "";
+          return (
+            <TabsEditor
+              tabs={currentTabs}
+              onChange={handleFieldChange}
+              children={currentChildren}
+              onChildrenChange={(updatedChildren) => updateNodeChildren(selectedNode.id, updatedChildren)}
+              activeTabId={activeTabId}
+              onActiveTabChange={(newActiveId) => updateNodeProps(selectedNode.id, { activeTabId: newActiveId })}
+            />
+          );
+        }
         if (key === "columns") {
           const currentColumns = value || [];
           const currentRows = selectedNode.props.rows !== undefined ? selectedNode.props.rows : (contract.properties.rows?.defaultValue || []);

@@ -7,7 +7,7 @@ export const COMPONENT_REGISTRY: Record<string, ComponentContract> = {
     category: 'layout',
     icon: 'Layout',
     allowedParents: [], // Root or nested under Container
-    allowedChildren: ['CONTAINER', 'GRID', 'STACK', 'STAT_CARD', 'STATUS_CARD', 'DATA_TABLE', 'CHART_PLACEHOLDER', 'BUTTON'],
+    allowedChildren: ['CONTAINER', 'GRID', 'STACK', 'STAT_CARD', 'STATUS_CARD', 'DATA_TABLE', 'CHART_PLACEHOLDER', 'BUTTON', 'TABS', 'FORM_SECTION'],
     properties: {
       padding: {
         type: 'enum',
@@ -37,7 +37,7 @@ export const COMPONENT_REGISTRY: Record<string, ComponentContract> = {
     category: 'layout',
     icon: 'Box',
     allowedParents: ['SECTION'],
-    allowedChildren: ['GRID', 'STACK', 'STAT_CARD', 'STATUS_CARD', 'DATA_TABLE', 'CHART_PLACEHOLDER', 'BUTTON'],
+    allowedChildren: ['GRID', 'STACK', 'STAT_CARD', 'STATUS_CARD', 'DATA_TABLE', 'CHART_PLACEHOLDER', 'BUTTON', 'TABS', 'FORM_SECTION'],
     properties: {
       maxWidth: {
         type: 'enum',
@@ -91,7 +91,7 @@ export const COMPONENT_REGISTRY: Record<string, ComponentContract> = {
     category: 'layout',
     icon: 'Rows',
     allowedParents: ['SECTION', 'CONTAINER', 'GRID'],
-    allowedChildren: ['STAT_CARD', 'STATUS_CARD', 'DATA_TABLE', 'CHART_PLACEHOLDER', 'BUTTON', 'STACK'],
+    allowedChildren: ['STAT_CARD', 'STATUS_CARD', 'DATA_TABLE', 'CHART_PLACEHOLDER', 'BUTTON', 'STACK', 'TABS', 'FORM_SECTION'],
     properties: {
       direction: {
         type: 'enum',
@@ -349,6 +349,101 @@ export const COMPONENT_REGISTRY: Record<string, ComponentContract> = {
         options: [
           { label: 'Small', value: 'small' },
           { label: 'Normal', value: 'normal' },
+        ],
+      },
+      action: {
+        type: 'string',
+        label: 'Destination (URL / Path)',
+        defaultValue: '',
+      },
+    },
+  },
+  TABS: {
+    type: 'TABS',
+    displayName: 'Tabs',
+    category: 'layout',
+    icon: 'Folder',
+    allowedParents: ['SECTION', 'CONTAINER', 'STACK'],
+    allowedChildren: ['STACK', 'GRID', 'CONTAINER'],
+    properties: {
+      tabs: {
+        type: 'json',
+        label: 'Tab Pages',
+        defaultValue: [
+          { id: 'tab-1', label: 'Tab 1' },
+          { id: 'tab-2', label: 'Tab 2' },
+        ],
+      },
+      activeTabId: {
+        type: 'string',
+        label: 'Active Tab ID',
+        defaultValue: 'tab-1',
+      },
+    },
+  },
+  FORM_SECTION: {
+    type: 'FORM_SECTION',
+    displayName: 'Form Section',
+    category: 'layout',
+    icon: 'FileText',
+    allowedParents: ['SECTION', 'CONTAINER', 'STACK'],
+    allowedChildren: ['STAT_CARD', 'STATUS_CARD', 'DATA_TABLE', 'CHART_PLACEHOLDER', 'BUTTON', 'FIELD'],
+    properties: {
+      title: {
+        type: 'string',
+        label: 'Section Title',
+        defaultValue: 'Section Title',
+      },
+      actionLabel: {
+        type: 'string',
+        label: 'Action Label',
+        defaultValue: '',
+      },
+      columnCount: {
+        type: 'enum',
+        label: 'Column Layout',
+        defaultValue: 2,
+        options: [
+          { label: '1 Column', value: 1 },
+          { label: '2 Columns', value: 2 },
+        ],
+      },
+    },
+  },
+  FIELD: {
+    type: 'FIELD',
+    displayName: 'Field',
+    category: 'data',
+    icon: 'Text',
+    allowedParents: ['FORM_SECTION'],
+    properties: {
+      label: {
+        type: 'string',
+        label: 'Field Label',
+        defaultValue: 'Field Label',
+      },
+      value: {
+        type: 'string',
+        label: 'Field Value',
+        defaultValue: 'Field Value',
+      },
+      fieldType: {
+        type: 'enum',
+        label: 'Field Type',
+        defaultValue: 'text',
+        options: [
+          { label: 'Text Input', value: 'text' },
+          { label: 'Select Dropdown', value: 'select' },
+          { label: 'Status Badge', value: 'status' },
+          { label: 'Read Only Text', value: 'readonly' },
+        ],
+      },
+      options: {
+        type: 'json',
+        label: 'Select Options',
+        defaultValue: [
+          { value: 'option-1', label: 'Option 1' },
+          { value: 'option-2', label: 'Option 2' },
         ],
       },
     },

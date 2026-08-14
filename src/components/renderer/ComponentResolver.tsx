@@ -522,7 +522,7 @@ export default function ComponentResolver({ node }: ComponentResolverProps) {
 
   // 9. BUTTON Component Renders
   const renderButton = () => {
-    const { text, variant, size } = node.props;
+    const { text, variant, size, action } = node.props;
 
     const variantStyles = {
       primary: "bg-slate-950 text-white hover:bg-slate-800 border border-transparent shadow-sm",
@@ -535,14 +535,200 @@ export default function ComponentResolver({ node }: ComponentResolverProps) {
       normal: "text-sm px-4.5 py-2 rounded-md",
     }[size as string] || "text-sm px-4.5 py-2 rounded-md";
 
+    const handleButtonClick = () => {
+      if (previewMode && action) {
+        window.location.href = action;
+      }
+    };
+
     return (
       <button
         type="button"
+        onClick={handleButtonClick}
         className={`font-semibold transition-all inline-flex items-center gap-1.5 ${variantStyles} ${sizeStyles}`}
       >
         <span>{text || "Action"}</span>
         <ChevronRight size={13} className="opacity-80" />
       </button>
+    );
+  };
+
+  // 10. TABS Component Renders
+  const renderTabs = () => {
+    const { tabs, activeTabId } = node.props;
+    const currentTabs = tabs || [];
+    const activeId = activeTabId || (currentTabs[0]?.id || "");
+
+    const activeIndex = currentTabs.findIndex((t: any) => t.id === activeId);
+
+    // Filter/Render only the active child
+    const activeChild = node.children && activeIndex >= 0 && activeIndex < node.children.length 
+      ? node.children[activeIndex]
+      : null;
+
+    const handleTabClick = (tabId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      updateNodeProps(node.id, { activeTabId: tabId });
+    };
+
+    return (
+      <div className="w-full flex flex-col gap-4 bg-white border border-slate-200/80 rounded-lg p-4 shadow-sm select-none">
+        {/* Tab Navigation Headers */}
+        <div className="flex items-center border-b border-slate-200 overflow-x-auto gap-2 scrollbar-none">
+          {currentTabs.map((tab: any) => {
+            const isActive = tab.id === activeId;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={(e) => handleTabClick(tab.id, e)}
+                className={`py-2.5 px-4 font-semibold text-xs border-b-2 transition-all relative whitespace-nowrap cursor-pointer -mb-px ${
+                  isActive
+                    ? "border-blue-600 text-blue-600 font-bold"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active Tab Content Area */}
+        <div className="w-full min-h-[100px]">
+          {activeChild ? (
+            <ComponentResolver node={activeChild} />
+          ) : (
+            !previewMode && (
+              <div className="w-full min-h-[80px] border border-dashed border-slate-200 rounded-lg flex items-center justify-center bg-slate-50/50 p-4">
+                <span className="text-[10px] text-slate-400 font-medium">Empty Tab Content. Drop layout container here.</span>
+              </div>
+            )
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // 11. FORM_SECTION Component Renders
+  const renderFormSection = () => {
+    const { title, actionLabel, columnCount } = node.props;
+    const colCount = Number(columnCount) || 2;
+
+    const gridLayoutClass = colCount === 1
+      ? "grid grid-cols-1 gap-4.5"
+      : "grid grid-cols-1 md:grid-cols-2 gap-4.5";
+
+    const hasChildren = node.children && node.children.length > 0;
+
+    return (
+      <div className="w-full flex flex-col bg-white border border-slate-200/80 rounded-lg p-5 shadow-sm select-none gap-4">
+        {/* Section Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+            {title || "Section Title"}
+          </h3>
+          {actionLabel && (
+            <button
+              type="button"
+              className="text-[9px] font-bold text-slate-500 hover:text-slate-800 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded transition-all cursor-pointer shadow-sm"
+            >
+              {actionLabel}
+            </button>
+          )}
+        </div>
+
+        {/* Section Content Area */}
+        <div className={gridLayoutClass}>
+          {hasChildren ? (
+            node.children?.map((child) => (
+              <ComponentResolver key={child.id} node={child} />
+            ))
+          ) : (
+            !previewMode && (
+              <div className="col-span-full w-full min-h-[75px] border border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center bg-slate-50/20 p-4">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Empty Form Section</span>
+                <span className="text-[10px] text-slate-400 mt-0.5">Drop content components here.</span>
+              </div>
+            )
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // 12. FIELD Component Renders
+  const renderField = () => {
+    const { label, value, fieldType, options } = node.props;
+    const type = fieldType || "text";
+
+    const labelEl = (
+      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+        {label || "Field Label"}
+      </label>
+    );
+
+    const renderValue = () => {
+      switch (type) {
+        case "select": {
+          const currentOptions = options || [];
+          const matchedOption = currentOptions.find((o: any) => o.value === value);
+          const displayLabel = matchedOption ? matchedOption.label : (value || "");
+          return (
+            <div className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold text-slate-800 w-full flex items-center justify-between select-none">
+              <span>{displayLabel}</span>
+              <span className="text-[9px] text-slate-400">▼</span>
+            </div>
+          );
+        }
+        case "status": {
+          const statusLower = (value || "").toLowerCase();
+          let bgClass = "bg-slate-50 text-slate-700 border-slate-200/60";
+          let dotClass = "bg-slate-400";
+
+          if (statusLower === "validated" || statusLower === "approved" || statusLower === "success") {
+            bgClass = "bg-emerald-50 text-emerald-700 border-emerald-200/60";
+            dotClass = "bg-emerald-505"; // Wait, bg-emerald-500
+            dotClass = "bg-emerald-500";
+          } else if (statusLower === "pending" || statusLower === "warning" || statusLower === "validation") {
+            bgClass = "bg-amber-50 text-amber-700 border-amber-200/60";
+            dotClass = "bg-amber-500";
+          } else if (statusLower === "critical" || statusLower === "rejected" || statusLower === "failed" || statusLower === "error") {
+            bgClass = "bg-red-50 text-red-700 border-red-200/60";
+            dotClass = "bg-red-500";
+          }
+
+          return (
+            <div className="flex items-center min-h-[30px]">
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold border ${bgClass}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+                <span>{value || ""}</span>
+              </span>
+            </div>
+          );
+        }
+        case "readonly": {
+          return (
+            <div className="text-xs font-semibold text-slate-800 py-1 select-none">
+              {value || ""}
+            </div>
+          );
+        }
+        case "text":
+        default:
+          return (
+            <div className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold text-slate-800 w-full select-none">
+              {value || ""}
+            </div>
+          );
+      }
+    };
+
+    return (
+      <div className="w-full flex flex-col">
+        {labelEl}
+        {renderValue()}
+      </div>
     );
   };
 
@@ -557,12 +743,24 @@ export default function ComponentResolver({ node }: ComponentResolverProps) {
       case "DATA_TABLE": return renderDataTable();
       case "CHART_PLACEHOLDER": return renderChartPlaceholder();
       case "BUTTON": return renderButton();
+      case "TABS": return renderTabs();
+      case "FORM_SECTION": return renderFormSection();
+      case "FIELD": return renderField();
       default: return null;
     }
   };
 
   if (previewMode) {
-    return renderComponent();
+    const gridSpan = node.props.gridSpan;
+    const resolverStyle: React.CSSProperties = {};
+    if (gridSpan) {
+      resolverStyle.gridColumn = `span ${gridSpan} / span ${gridSpan}`;
+    }
+    return (
+      <div style={resolverStyle}>
+        {renderComponent()}
+      </div>
+    );
   }
 
   // Determine current active drop hover indicators

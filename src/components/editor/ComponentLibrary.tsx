@@ -28,6 +28,9 @@ const COMPONENT_DESCRIPTIONS: Record<string, string> = {
   DATA_TABLE: "Tabular display of mock transactions.",
   CHART_PLACEHOLDER: "Line, bar, or donut trend graph representation.",
   BUTTON: "Executable click event selector.",
+  TABS: "Horizontal tabs panel to toggle container contents.",
+  FORM_SECTION: "Semantic enterprise card grid to layout form components.",
+  FIELD: "A single informational or editable form field label and value.",
 };
 
 // Draggable wrapper component for Library items
