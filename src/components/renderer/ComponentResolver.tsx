@@ -39,13 +39,8 @@ interface ComponentResolverProps {
 }
 
 export default function ComponentResolver({ node }: ComponentResolverProps) {
-  const { selectedNodeId, selectNode, previewMode, dragState } = useEditorStore();
+  const { selectedNodeId, selectNode, previewMode, dragState, updateNodeProps } = useEditorStore();
   const isSelected = selectedNodeId === node.id;
-
-  const registryEntry = COMPONENT_REGISTRY[node.type];
-  if (!registryEntry) {
-    return <div className="p-2 border border-red-200 text-red-500 text-xs">Unknown component type: {node.type}</div>;
-  }
 
   // Setup dnd-kit drag and drop hooks
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
@@ -57,6 +52,11 @@ export default function ComponentResolver({ node }: ComponentResolverProps) {
     id: node.id,
     disabled: previewMode,
   });
+
+  const registryEntry = COMPONENT_REGISTRY[node.type];
+  if (!registryEntry) {
+    return <div className="p-2 border border-red-200 text-red-500 text-xs">Unknown component type: {node.type}</div>;
+  }
 
   // Combine drag and drop refs
   const setCombinedRef = (element: HTMLElement | null) => {
@@ -559,7 +559,7 @@ export default function ComponentResolver({ node }: ComponentResolverProps) {
     const currentTabs = tabs || [];
     const activeId = activeTabId || (currentTabs[0]?.id || "");
 
-    const activeIndex = currentTabs.findIndex((t: any) => t.id === activeId);
+    const activeIndex = currentTabs.findIndex((t: { id: string; label: string }) => t.id === activeId);
 
     // Filter/Render only the active child
     const activeChild = node.children && activeIndex >= 0 && activeIndex < node.children.length 
@@ -575,7 +575,7 @@ export default function ComponentResolver({ node }: ComponentResolverProps) {
       <div className="w-full flex flex-col gap-4 bg-white border border-slate-200/80 rounded-lg p-4 shadow-sm select-none">
         {/* Tab Navigation Headers */}
         <div className="flex items-center border-b border-slate-200 overflow-x-auto gap-2 scrollbar-none">
-          {currentTabs.map((tab: any) => {
+          {currentTabs.map((tab: { id: string; label: string }) => {
             const isActive = tab.id === activeId;
             return (
               <button
@@ -672,7 +672,7 @@ export default function ComponentResolver({ node }: ComponentResolverProps) {
       switch (type) {
         case "select": {
           const currentOptions = options || [];
-          const matchedOption = currentOptions.find((o: any) => o.value === value);
+          const matchedOption = currentOptions.find((o: { value: string; label: string }) => o.value === value);
           const displayLabel = matchedOption ? matchedOption.label : (value || "");
           return (
             <div className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold text-slate-800 w-full flex items-center justify-between select-none">
